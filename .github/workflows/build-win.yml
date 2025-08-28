@@ -1,0 +1,37 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-win:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas openpyxl pyinstaller
+
+      - name: Build with PyInstaller (auto-pick script)
+        shell: pwsh
+        run: |
+          $candidates = @("excel_kpi_gui.py", "安達商品篩選器.py")
+          $script = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $script) { throw "找不到可用的腳本檔（excel_kpi_gui.py 或 安達商品篩選器.py）" }
+          Write-Host "Building $script ..."
+          pyinstaller "$script" --onefile --noconsole --name kpi-gui
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kpi-win
+          path: dist/kpi-gui.exe
